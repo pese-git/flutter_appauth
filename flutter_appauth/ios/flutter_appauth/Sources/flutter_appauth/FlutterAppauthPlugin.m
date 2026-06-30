@@ -150,8 +150,13 @@ AppAuthAuthorization *authorization;
 }
 
 - (void)handleMethodCall:(FlutterMethodCall *)call
-                  result:(FlutterResult)result {
-  if ([AUTHORIZE_AND_EXCHANGE_CODE_METHOD isEqualToString:call.method]) {
+                   result:(FlutterResult)result {
+  if ([CLOSE_BROWSER_METHOD isEqualToString:call.method]) {
+    if (_currentAuthorizationFlow) {
+      [_currentAuthorizationFlow cancel];
+    }
+    result(nil);
+  } else if ([AUTHORIZE_AND_EXCHANGE_CODE_METHOD isEqualToString:call.method]) {
     [self handleAuthorizeMethodCall:[call arguments]
                              result:result
                        exchangeCode:true];
