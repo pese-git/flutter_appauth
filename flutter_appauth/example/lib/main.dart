@@ -168,6 +168,17 @@ class _MyAppState extends State<MyApp> {
                             'End session using SFSafariViewController'),
                       )),
                 const SizedBox(height: 8),
+                ElevatedButton(
+                  child: const Text('Sign in with auto close browser'),
+                  onPressed: () {
+                    _signInWithNoCodeExchange();
+                    Future.delayed(
+                      Duration(seconds: 5),
+                      () => _appAuth.closeBrowser(),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
                 if (_error != null) Text(_error ?? ''),
                 const SizedBox(height: 8),
                 const Text('authorization code'),
@@ -272,9 +283,9 @@ class _MyAppState extends State<MyApp> {
   Future<void> _signInWithNoCodeExchange() async {
     try {
       _setBusyState();
-      /* 
+      /*
         The discovery endpoint (_discoveryUrl) is used to find the
-        configuration. The code challenge generation can be checked here 
+        configuration. The code challenge generation can be checked here
         > https://github.com/MaikuB/flutter_appauth/search?q=challenge.
         The code challenge is generated from the code verifier and only the
         code verifier is included in the result. This because to get the token
@@ -288,7 +299,7 @@ class _MyAppState extends State<MyApp> {
             discoveryUrl: _discoveryUrl, scopes: _scopes, loginHint: 'bob'),
       );
 
-      /* 
+      /*
         or just use the issuer
         var result = await _appAuth.authorize(
           AuthorizationRequest(

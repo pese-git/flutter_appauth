@@ -52,6 +52,7 @@ public class FlutterAppauthPlugin
   private static final String AUTHORIZE_METHOD = "authorize";
   private static final String TOKEN_METHOD = "token";
   private static final String END_SESSION_METHOD = "endSession";
+  private static final String CLOSE_BROWSER_METHOD = "closeBrowser";
 
   private static final String DISCOVERY_ERROR_CODE = "discovery_failed";
   private static final String AUTHORIZE_AND_EXCHANGE_CODE_ERROR_CODE =
@@ -193,6 +194,9 @@ public class FlutterAppauthPlugin
         } catch (Exception ex) {
           finishWithError(END_SESSION_ERROR_CODE, ex.getLocalizedMessage(), ex);
         }
+        break;
+      case CLOSE_BROWSER_METHOD:
+        result.success(null);
         break;
       default:
         result.notImplemented();
