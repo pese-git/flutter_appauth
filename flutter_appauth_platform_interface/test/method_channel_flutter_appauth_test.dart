@@ -190,4 +190,11 @@ void main() {
       })
     ]);
   });
+
+  test('closeBrowser', () async {
+    await flutterAppAuth.closeBrowser();
+    expect(log, <Matcher>[
+      isMethodCall('closeBrowser', arguments: null)
+    ]);
+  });
 }

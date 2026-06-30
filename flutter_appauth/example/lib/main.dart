@@ -168,6 +168,17 @@ class _MyAppState extends State<MyApp> {
                             'End session using SFSafariViewController'),
                       )),
                 const SizedBox(height: 8),
+                ElevatedButton(
+                  child: const Text('Close browser after delay'),
+                  onPressed: () {
+                    _signInWithNoCodeExchange();
+                    Future.delayed(
+                      const Duration(seconds: 5),
+                      () => _appAuth.closeBrowser(),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
                 if (_error != null) Text(_error ?? ''),
                 const SizedBox(height: 8),
                 const Text('authorization code'),
