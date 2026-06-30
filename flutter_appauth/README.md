@@ -3,6 +3,21 @@
 [![pub package](https://img.shields.io/pub/v/flutter_appauth.svg)](https://pub.dartlang.org/packages/flutter_appauth)
 [![Build Status](https://api.cirrus-ci.com/github/MaikuB/flutter_appauth.svg)](https://cirrus-ci.com/github/MaikuB/flutter_appauth/)
 
+- [Introduction](#introduction)
+- [Tutorials from identity providers](#tutorials-from-identity-providers)
+- [Getting Started](#getting-started)
+  - [Detecting user cancellation](#detecting-user-cancellation)
+  - [Refreshing tokens](#refreshing-tokens)
+  - [End session](#end-session)
+  - [Handling errors](#handling-errors)
+  - [Ephemeral Sessions (iOS and macOS only)](#ephemeral-sessions-ios-and-macos-only)
+- [Android setup](#android-setup)
+- [iOS/macOS setup](#iosmacos-setup)
+- [API docs](#api-docs)
+- [FAQs](#faqs)
+
+
+## Introduction 
 A Flutter bridge for AppAuth (https://appauth.io) used authenticating and authorizing users. Note that AppAuth also supports the PKCE extension that is required some providers so this plugin should work with them.
 
 **IMPORTANT NOTES**:
@@ -11,15 +26,15 @@ A Flutter bridge for AppAuth (https://appauth.io) used authenticating and author
 
 ## Tutorials from identity providers
 
+The following are tutorials from identity providers that reference using this plugin. If the identity provider you're using isn't in this list, it doesn't mean that plugin doesn't work with it. It only means that these are some of the identity providers that have tutorials that specify that developers can use this plugin. Generally, if your identity provider supports OAuth 2.0 and follows the industry standards and specifications then the plugin can be expected to work. Developers should also note that the following links are managed by external parties. If you choose to open these links, do so at your own risk and be aware that it's possible the content may be out of date
+
 * [Asgardeo](https://wso2.com/asgardeo/docs/tutorials/auth-users-into-flutter-apps/)
-* [Auth0](https://auth0.com/blog/get-started-with-flutter-authentication/)
-* [FusionAuth](https://fusionauth.io/blog/2020/11/23/securing-flutter-oauth/)
+* [FusionAuth](https://fusionauth.io/docs/quickstarts/quickstart-flutter-native#setting-up-appauth)
 
 
 ## Getting Started
 
-Please see the example that demonstrates how to sign into the demo IdentityServer instance (https://demo.duendesoftware.com). It has also been tested with Azure B2C and Google Sign-in. It is suggested that developers check the documentation of the identity provider they are using to see what capabilities it supports e.g. how to logout, what values of the `prompt` parameter it supports etc. API docs can be found [here](https://pub.dartlang.org/documentation/flutter_appauth/latest/)
-
+Please see the example that demonstrates how to sign into the demo IdentityServer instance (https://demo.duendesoftware.com). It has also been tested with Azure B2C, Auth0, FusionAuth and Google Sign-in. Developers should check the documentation of the identity provider they are using to see what capabilities it supports (e.g. how to logout, what values of the `prompt` parameter it supports etc) and how to configure/register their application with the identity provider. Understanding [OAuth 2.0](https://datatracker.ietf.org/doc/html/rfc6749) is also essential, especially when it comes to [best practices for native mobile apps](https://datatracker.ietf.org/doc/html/rfc8252).
 
 The first step is to create an instance of the plugin
 
@@ -83,6 +98,18 @@ final TokenResponse result = await appAuth.token(TokenRequest('<client_id>', '<r
 
 Reusing the nonce and code verifier is particularly important as the AppAuth SDKs (especially on Android) may return an error (e.g. ID token validation error due to nonce mismatch) if this isn't done
 
+### Detecting user cancellation
+
+Both the `authorize` and `authorizeAndExchangeCode` launch the user into a browser which they can cancel. This shouldn't be considered an error and should be handled gracefully.
+
+```dart
+try {
+  await appAuth.authorize(...); // Or authorizeAndExchangeCode(...)
+} on FlutterAppAuthUserCancelledException catch (e) {
+  // Handle user cancellation
+}
+```
+
 ### Refreshing tokens
 
 Some providers may return a refresh token that could be used to refresh short-lived access tokens. A request to get a new access token before it expires could be made that would like similar to the following code
@@ -102,10 +129,31 @@ If your server has an [end session endpoint](https://openid.net/specs/openid-con
 await appAuth.endSession(EndSessionRequest(
           idTokenHint: '<idToken>',
           postLogoutRedirectUrl: '<postLogoutRedirectUrl>',
-          serviceConfiguration: AuthorizationServiceConfiguration(authorizationEndpoint: '<authorization_endpoint>',  tokenEndpooint: '<token_endpoint>', endSessionEndpoint: '<end_session_endpoint>'));
+          serviceConfiguration: AuthorizationServiceConfiguration(authorizationEndpoint: '<authorization_endpoint>', tokenEndpoint: '<token_endpoint>', endSessionEndpoint: '<end_session_endpoint>')));
 ```
 
 The above code passes an `AuthorizationServiceConfiguration` with all the endpoints defined but alternatives are to specify an `issuer` or `discoveryUrl` like you would with the other APIs in the plugin (e.g. `authorizeAndExchangeCode()`).
+
+### Handling errors
+
+Each of these methods will throw exceptions if anything goes wrong. For example:
+
+```dart
+
+try {
+  await appAuth.authorize(...);
+} on FlutterAppAuthPlatformException catch (e) {
+  final FlutterAppAuthPlatformErrorDetails details = e.details;
+  // Handle exceptions based on errors from AppAuth.
+} catch (e) {
+  // Handle other errors.
+}
+
+The `FlutterAppAuthPlatformErrorDetails` object contains all the error information from the underlying platform's AppAuth SDK.
+
+This includes the error codes specified in the [RFC](https://datatracker.ietf.org/doc/html/rfc6749#section-5.2).
+
+```
 
 ### Ephemeral Sessions (iOS and macOS only)
 On iOS (versions 13 and above) and macOS you can use the option `preferEphemeralSession = true` to start an 
@@ -119,10 +167,28 @@ Otherwise, there will be still an active login session in the browser.
 
 ## Android setup
 
-Go to the `build.gradle` file for your Android app to specify the custom scheme so that there should be a section in it that look similar to the following but replace `<your_custom_scheme>` with the desired value
+Go to the `build.gradle.kts` file for your Android app to specify the custom scheme so that there should be a section in it that look similar to the following but replace `<your_custom_scheme>` with the desired value:
 
+```kotlin
+
+android {
+    ...
+    defaultConfig {
+        ...
+        manifestPlaceholders.putAll(
+            mapOf(
+                "appAuthRedirectScheme" to "<your_custom_scheme>"
+            )
+        )
+    }
+}
 ```
-...groovy
+
+If you're using `build.gradle`:
+
+
+```groovy
+
 android {
     ...
     defaultConfig {
@@ -145,6 +211,7 @@ AndroidManifest.xml:
 ...
 <activity
         android:name="net.openid.appauth.RedirectUriReceiverActivity"
+        android:theme="@style/Theme.AppCompat.Translucent.NoTitleBar"
         android:exported="true"
         tools:node="replace">
     <intent-filter>
@@ -166,6 +233,12 @@ Attribute application@name at AndroidManifest.xml:5:9-42 requires a placeholder 
 
 If you see this error then update your `build.gradle` to use `+=` instead.
 
+### Troubleshooting
+
+#### No Redirect to app after login
+
+If you're experiencing issues where the authorization flow does not return to your Flutter app, even though the intent filter is correctly set and `RedirectUriReceiverActivity` is invoked, the issue might be due to the following line in your `AndroidManifest.xml`: `android:taskAffinity=""`. Removing it fixes the [issue](https://github.com/MaikuB/flutter_appauth/issues/503#issuecomment-2165906205)
+
 ## iOS/macOS setup
 
 Go to the `Info.plist` for your iOS/macOS app to specify the custom scheme so that there should be a section in it that look similar to the following but replace `<your_custom_scheme>` with the desired value
@@ -186,6 +259,11 @@ Go to the `Info.plist` for your iOS/macOS app to specify the custom scheme so th
 ```
 
 Note: iOS apps generate a file called `cache.db` which contains the table `cfurl_cache_receiver_data`. This table will contain the access token obtained after the login is completed. If the potential data leak represents a threat for your application then you can disable the information caching for the entire iOS app (ex. https://kunalgupta1508.medium.com/data-leakage-with-cache-db-2d311582cf23).
+
+
+## API docs
+
+API docs can be found [here](https://pub.dartlang.org/documentation/flutter_appauth/latest/)
 
 ## FAQs
 

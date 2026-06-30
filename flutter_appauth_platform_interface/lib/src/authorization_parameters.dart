@@ -1,3 +1,5 @@
+import 'external_user_agent.dart';
+
 mixin AuthorizationParameters {
   /// Hint to the Authorization Server about the login identifier the End-User
   /// might use to log in.
@@ -7,11 +9,9 @@ mixin AuthorizationParameters {
   /// Server prompts the End-User for reauthentication and consent.
   List<String>? promptValues;
 
-  /// Whether to use an ephemeral session that prevents cookies and other
-  /// browser data being shared with the user's normal browser session.
-  ///
-  /// This property is only applicable to iOS versions 13 and above.
-  bool? preferEphemeralSession;
+  /// Specifies the external user-agent to use.
+  ExternalUserAgent? externalUserAgent;
 
+  /// Specifies the response mode to use.
   String? responseMode;
 }

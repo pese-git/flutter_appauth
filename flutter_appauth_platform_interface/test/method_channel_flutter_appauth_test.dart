@@ -8,8 +8,10 @@ void main() {
   const MethodChannel channel =
       MethodChannel('crossingthestreams.io/flutter_appauth');
   final List<MethodCall> log = <MethodCall>[];
-  channel.setMockMethodCallHandler((MethodCall methodCall) async {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
     log.add(methodCall);
+    return <Object, Object>{};
   });
 
   tearDown(() {
@@ -36,7 +38,8 @@ void main() {
           'serviceConfiguration': null,
           'additionalParameters': null,
           'allowInsecureConnections': false,
-          'preferEphemeralSession': false,
+          'externalUserAgent':
+              ExternalUserAgent.asWebAuthenticationSession.index,
           'promptValues': null,
           'responseMode': null,
           'nonce': null,
@@ -64,7 +67,8 @@ void main() {
           'serviceConfiguration': null,
           'additionalParameters': null,
           'allowInsecureConnections': false,
-          'preferEphemeralSession': false,
+          'externalUserAgent':
+              ExternalUserAgent.asWebAuthenticationSession.index,
           'promptValues': null,
           'clientSecret': null,
           'refreshToken': null,
@@ -182,7 +186,7 @@ void main() {
         'issuer': null,
         'discoveryUrl': 'someDiscoveryUrl',
         'serviceConfiguration': null,
-        'preferEphemeralSession': false,
+        'externalUserAgent': ExternalUserAgent.asWebAuthenticationSession.index,
       })
     ]);
   });

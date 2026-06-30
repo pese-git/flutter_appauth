@@ -1,26 +1,32 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:http/http.dart' as http;
 
-void main() => runApp(MyApp());
+void main() => runApp(const MyApp());
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
-  _MyAppState createState() => _MyAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
   bool _isBusy = false;
   final FlutterAppAuth _appAuth = const FlutterAppAuth();
+
   String? _codeVerifier;
   String? _nonce;
   String? _authorizationCode;
   String? _refreshToken;
   String? _accessToken;
   String? _idToken;
+  String? _error;
 
   final TextEditingController _authorizationCodeTextController =
       TextEditingController();
@@ -76,6 +82,7 @@ class _MyAppState extends State<MyApp> {
                   child: const Text('Sign in with no code exchange'),
                   onPressed: () => _signInWithNoCodeExchange(),
                 ),
+                const SizedBox(height: 8),
                 ElevatedButton(
                   child: const Text(
                       'Sign in with no code exchange and generated nonce'),
@@ -83,8 +90,8 @@ class _MyAppState extends State<MyApp> {
                 ),
                 const SizedBox(height: 8),
                 ElevatedButton(
-                  child: const Text('Exchange code'),
                   onPressed: _authorizationCode != null ? _exchangeCode : null,
+                  child: const Text('Exchange code'),
                 ),
                 const SizedBox(height: 8),
                 ElevatedButton(
@@ -101,22 +108,67 @@ class _MyAppState extends State<MyApp> {
                         textAlign: TextAlign.center,
                       ),
                       onPressed: () => _signInWithAutoCodeExchange(
-                          preferEphemeralSession: true),
+                          externalUserAgent: ExternalUserAgent
+                              .ephemeralAsWebAuthenticationSession),
+                    ),
+                  ),
+                if (Platform.isIOS)
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      child: const Text(
+                        'Sign in with auto code exchange using '
+                        'SFSafariViewController',
+                        textAlign: TextAlign.center,
+                      ),
+                      onPressed: () => _signInWithAutoCodeExchange(
+                          externalUserAgent:
+                              ExternalUserAgent.sfSafariViewController),
                     ),
                   ),
                 ElevatedButton(
-                  child: const Text('Refresh token'),
                   onPressed: _refreshToken != null ? _refresh : null,
+                  child: const Text('Refresh token'),
                 ),
                 const SizedBox(height: 8),
                 ElevatedButton(
-                  child: const Text('End session'),
                   onPressed: _idToken != null
                       ? () async {
                           await _endSession();
                         }
                       : null,
+                  child: const Text('End session'),
                 ),
+                if (Platform.isIOS || Platform.isMacOS)
+                  Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton(
+                        onPressed: _idToken != null
+                            ? () async {
+                                await _endSession(
+                                    externalUserAgent: ExternalUserAgent
+                                        .ephemeralAsWebAuthenticationSession);
+                              }
+                            : null,
+                        child:
+                            const Text('End session using ephemeral session'),
+                      )),
+                if (Platform.isIOS)
+                  Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton(
+                        onPressed: _idToken != null
+                            ? () async {
+                                await _endSession(
+                                    externalUserAgent: ExternalUserAgent
+                                        .sfSafariViewController);
+                              }
+                            : null,
+                        child: const Text(
+                            'End session using SFSafariViewController'),
+                      )),
+                const SizedBox(height: 8),
+                if (_error != null) Text(_error ?? ''),
                 const SizedBox(height: 8),
                 const Text('authorization code'),
                 TextField(
@@ -148,16 +200,22 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  Future<void> _endSession() async {
+  Future<void> _endSession(
+      {ExternalUserAgent externalUserAgent =
+          ExternalUserAgent.asWebAuthenticationSession}) async {
     try {
       _setBusyState();
       await _appAuth.endSession(EndSessionRequest(
           idTokenHint: _idToken,
           postLogoutRedirectUrl: _postLogoutRedirectUrl,
-          serviceConfiguration: _serviceConfiguration));
+          serviceConfiguration: _serviceConfiguration,
+          externalUserAgent: externalUserAgent));
       _clearSessionInfo();
-    } catch (_) {}
-    _clearBusyState();
+    } catch (e) {
+      _handleError(e);
+    } finally {
+      _clearBusyState();
+    }
   }
 
   void _clearSessionInfo() {
@@ -180,12 +238,14 @@ class _MyAppState extends State<MyApp> {
   Future<void> _refresh() async {
     try {
       _setBusyState();
-      final TokenResponse? result = await _appAuth.token(TokenRequest(
+      final TokenResponse result = await _appAuth.token(TokenRequest(
           _clientId, _redirectUrl,
           refreshToken: _refreshToken, issuer: _issuer, scopes: _scopes));
       _processTokenResponse(result);
       await _testApi(result);
-    } catch (_) {
+    } catch (e) {
+      _handleError(e);
+    } finally {
       _clearBusyState();
     }
   }
@@ -193,7 +253,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> _exchangeCode() async {
     try {
       _setBusyState();
-      final TokenResponse? result = await _appAuth.token(TokenRequest(
+      final TokenResponse result = await _appAuth.token(TokenRequest(
           _clientId, _redirectUrl,
           authorizationCode: _authorizationCode,
           discoveryUrl: _discoveryUrl,
@@ -202,7 +262,9 @@ class _MyAppState extends State<MyApp> {
           scopes: _scopes));
       _processTokenResponse(result);
       await _testApi(result);
-    } catch (_) {
+    } catch (e) {
+      _handleError(e);
+    } finally {
       _clearBusyState();
     }
   }
@@ -221,7 +283,7 @@ class _MyAppState extends State<MyApp> {
         Code challenge is not used according to the spec
         https://www.rfc-editor.org/rfc/rfc7636 page 9 section 4.5.
       */
-      final AuthorizationResponse? result = await _appAuth.authorize(
+      final AuthorizationResponse result = await _appAuth.authorize(
         AuthorizationRequest(_clientId, _redirectUrl,
             discoveryUrl: _discoveryUrl, scopes: _scopes, loginHint: 'bob'),
       );
@@ -238,10 +300,10 @@ class _MyAppState extends State<MyApp> {
         );
       */
 
-      if (result != null) {
-        _processAuthResponse(result);
-      }
-    } catch (_) {
+      _processAuthResponse(result);
+    } catch (e) {
+      _handleError(e);
+    } finally {
       _clearBusyState();
     }
   }
@@ -253,7 +315,7 @@ class _MyAppState extends State<MyApp> {
       final String nonce =
           base64Url.encode(List<int>.generate(16, (_) => random.nextInt(256)));
       // use the discovery endpoint to find the configuration
-      final AuthorizationResponse? result = await _appAuth.authorize(
+      final AuthorizationResponse result = await _appAuth.authorize(
         AuthorizationRequest(_clientId, _redirectUrl,
             discoveryUrl: _discoveryUrl,
             scopes: _scopes,
@@ -261,16 +323,17 @@ class _MyAppState extends State<MyApp> {
             nonce: nonce),
       );
 
-      if (result != null) {
-        _processAuthResponse(result);
-      }
-    } catch (_) {
+      _processAuthResponse(result);
+    } catch (e) {
+      _handleError(e);
+    } finally {
       _clearBusyState();
     }
   }
 
   Future<void> _signInWithAutoCodeExchange(
-      {bool preferEphemeralSession = false}) async {
+      {ExternalUserAgent externalUserAgent =
+          ExternalUserAgent.asWebAuthenticationSession}) async {
     try {
       _setBusyState();
 
@@ -278,15 +341,12 @@ class _MyAppState extends State<MyApp> {
         This shows that we can also explicitly specify the endpoints rather than
         getting from the details from the discovery document.
       */
-      final AuthorizationTokenResponse? result =
+      final AuthorizationTokenResponse result =
           await _appAuth.authorizeAndExchangeCode(
-        AuthorizationTokenRequest(
-          _clientId,
-          _redirectUrl,
-          serviceConfiguration: _serviceConfiguration,
-          scopes: _scopes,
-          preferEphemeralSession: preferEphemeralSession,
-        ),
+        AuthorizationTokenRequest(_clientId, _redirectUrl,
+            serviceConfiguration: _serviceConfiguration,
+            scopes: _scopes,
+            externalUserAgent: externalUserAgent),
       );
 
       /* 
@@ -306,12 +366,33 @@ class _MyAppState extends State<MyApp> {
         ```
       */
 
-      if (result != null) {
-        _processAuthTokenResponse(result);
-        await _testApi(result);
-      }
-    } catch (_) {
+      _processAuthTokenResponse(result);
+      await _testApi(result);
+    } catch (e) {
+      _handleError(e);
+    } finally {
       _clearBusyState();
+    }
+  }
+
+  void _handleError(Object e) {
+    if (e is FlutterAppAuthUserCancelledException) {
+      setState(() {
+        _error = 'The user cancelled the flow!';
+      });
+    } else if (e is FlutterAppAuthPlatformException) {
+      setState(() {
+        _error = e.platformErrorDetails.toString();
+      });
+    } else if (e is PlatformException) {
+      setState(() {
+        _error = 'Error\n\nCode: ${e.code}\nMessage: ${e.message}\n'
+            'Details: ${e.details}';
+      });
+    } else {
+      setState(() {
+        _error = 'Error: $e';
+      });
     }
   }
 
@@ -323,6 +404,7 @@ class _MyAppState extends State<MyApp> {
 
   void _setBusyState() {
     setState(() {
+      _error = '';
       _isBusy = true;
     });
   }
@@ -351,9 +433,9 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void _processTokenResponse(TokenResponse? response) {
+  void _processTokenResponse(TokenResponse response) {
     setState(() {
-      _accessToken = _accessTokenTextController.text = response!.accessToken!;
+      _accessToken = _accessTokenTextController.text = response.accessToken!;
       _idToken = _idTokenTextController.text = response.idToken!;
       _refreshToken = _refreshTokenTextController.text = response.refreshToken!;
       _accessTokenExpirationTextController.text =

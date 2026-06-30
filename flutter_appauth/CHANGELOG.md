@@ -1,3 +1,71 @@
+## [10.0.0]
+
+* **Breaking change** updated minimum supported SDK version to Flutter 3.29/Dart 3.7
+* Bumped `flutter_lints` dev dependency
+* [Android] **Breaking changes** updated `compileSdkVersion` to 35 and AGP to 8.6.0
+* Updated Android setup section in readme with instructions for apps using Kotlin DSL. Thanks to the PR from [LennartMart](https://github.com/LennartMart)
+
+## [9.0.1]
+
+* [iOS][macOS] bumped AppAuth iOS dependency to 2.0.0
+
+## [9.0.0]
+
+* **Breaking change** updated minimum supported SDK version to Flutter 3.19/Dart 3.3
+* [Android] **Breaking changes** updated `compileSdkVersion` to 33 and AGP to 8.0.1 to align with what's used by the AppAuth Android SDK
+* [iOS][macOS] added Swift Package Manager support
+* [iOS][macOS] **Breaking changes** a number of Objective-C headers that were public are now no longer public. This means that classes were defined on the native side of the plugin may now no longer visible. These changes likely don't affect users of the plugin as this is to do with APIs that can be accessed via Objective-C or Swift. These changes were done to add Swift Package Manager support
+* Migrated Android side of example to use plugin DSL
+* Bumped `flutter_lints` dev dependency
+* Fixed typo in the code snippet shown in the **End session** section of the readme. Thanks to the PR from [barryguvenkaya](https://github.com/barryguvenkaya)
+* Updated readme to add a table of contents
+* Updated links to tutorials associated with identity providers. The Auth0 one has been removed as their tutorial has changed to use a different SDK. A disclaimer has been added to warn that the content is managed by external parties and may also be out of date
+
+## [8.0.2]
+
+* [iOS][macOS] bumped AppAuth iOS dependency to 1.7.6
+* [iOS][macOS] **BAD** added Swift Package Manager support but "local" testing didn't uncover. This has been reverted by 8.0.3
+
+## [8.0.1]
+
+* Fixed issue [568](https://github.com/MaikuB/flutter_appauth/issues/568) where compilation could fail with a `'OIDExternalUserAgent.h' file not found` error
+
+## [8.0.0+1]
+
+* Updated 8.0.0 as it was missing mention of the privacy manifest file to the macOS implementation of the plugin
+
+## [8.0.0]
+
+* **Breaking change** Replaced the `preferEphemeralSession` property in the `AuthorizationRequest`, `AuthorizationTokenRequest` and  `EndSessionRequest` classes with `externalUserAgent`. Thanks to the PR from [john-slow](https://github.com/john-slow). `externalUserAgent` is presented by the newly `ExternalUserAgent` enum that has the following values
+    * `asWebAuthenticationSession`: uses the [ASWebAuthenticationSession](https://developer.apple.com/documentation/authenticationservices/aswebauthenticationsession) APIs where possible. This is the default value and was the default behaviour behaviour that aligns with what the AppAuth iOS SDK would do in choosing the best available user-agent
+    * `ephemeralAsWebAuthenticationSession`: uses an ephemeral session via the [ASWebAuthenticationSession](https://developer.apple.com/documentation/authenticationservices/aswebauthenticationsession) APIs. Applications that previously used `preferEphemeralSession` and specified to be `true` can migrate by specifying this enum value
+    * `sfSafariViewController`: uses the [SFSafariViewController](https://developer.apple.com/documentation/safariservices/sfsafariviewcontroller) APIs
+* Updated iOS plugin details to indicate it needs a minimum iOS version of 11.0. This aligns with the minimum best supported version for Flutter 3.13.0
+* Updated macOS plugin details to indicate it needs a minimum iOS version of 10.14. This aligns with the minimum best supported version for Flutter 3.13.0
+* [Android] some refactoring around code related to `allowInsecureConnections` has been done in response to issue [554](https://github.com/MaikuB/flutter_appauth/issues/554)
+* [Android] added logic to help with issues like [205](https://github.com/MaikuB/flutter_appauth/issues/205) where an app tries to refresh a token but the instances of `AuthorizationService` have been disposed
+* [macOS] added privacy manifest file
+
+# 7.0.1
+
+* [iOS] correctly bumped AppAuth iOS dependency to 1.7.5. The 7.0.0 release mistakenly only bumped the dependency for macOS
+
+# 7.0.0
+
+* **Breaking change** Bumped minimum Flutter and Dart SDK constraints to 3.13.0 and 3.1.0 respectively
+* **Breaking change** all methods have now been made to return non-nullable types
+* [macOS] bumped AppAuth iOS dependency to 1.7.5
+* Updated error handling to expose more details for each platform. Plugin will now throw `FlutterAppAuthUserCancelledException` when an authorization request has been cancelled as a result of the user closing the browser. For other scenarios the plugin will throw `FlutterAppAuthPlatformException`. See the API docs for both classes for more details on the available details. Both exception classes inherit from `PlatformException` so the changes should be backwards compatible
+* Updated readme with more details on essential knowledge and links to OAuth 2.0 specifications
+
+# 6.0.7
+
+* [Android] updated plugin to specify `Theme.AppCompat.Translucent.NoTitleBar` as the theme for the `RedirectUriReceiverActivity` from the AppAuth Android SDK. This is to fix a crash raised with issues [#362](https://github.com/MaikuB/flutter_appauth/issues/362) and [#515](https://github.com/MaikuB/flutter_appauth/issues/515)
+
+# 6.0.6
+
+* [iOS][macOS] bumped AppAuth iOS dependency to 1.7.4
+
 # 6.0.5
 
 * [iOS] bumped AppAuth iOS dependency to 1.7.2
