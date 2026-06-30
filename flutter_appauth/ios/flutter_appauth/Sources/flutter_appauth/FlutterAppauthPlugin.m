@@ -137,11 +137,11 @@ AppAuthAuthorization *authorization;
 
   NSAppleEventManager *appleEventManager =
       [NSAppleEventManager sharedAppleEventManager];
-  [appleEventManager setEventHandler:instance
-                         andSelector:@selector(handleGetURLEvent:
-                                                  withReplyEvent:)
-                       forEventClass:kInternetEventClass
-                          andEventID:kAEGetURL];
+  [appleEventManager
+      setEventHandler:instance
+          andSelector:@selector(handleGetURLEvent:withReplyEvent:)
+        forEventClass:kInternetEventClass
+           andEventID:kAEGetURL];
 #else
   authorization = [[AppAuthIOSAuthorization alloc] init];
 
@@ -150,7 +150,7 @@ AppAuthAuthorization *authorization;
 }
 
 - (void)handleMethodCall:(FlutterMethodCall *)call
-                   result:(FlutterResult)result {
+                  result:(FlutterResult)result {
   if ([CLOSE_BROWSER_METHOD isEqualToString:call.method]) {
     if (_currentAuthorizationFlow) {
       [_currentAuthorizationFlow cancel];
