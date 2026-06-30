@@ -150,7 +150,7 @@ AppAuthAuthorization *authorization;
 }
 
 - (void)handleMethodCall:(FlutterMethodCall *)call
-                   result:(FlutterResult)result {
+                  result:(FlutterResult)result {
   if ([CLOSE_BROWSER_METHOD isEqualToString:call.method]) {
     if (_currentAuthorizationFlow) {
       [_currentAuthorizationFlow cancel];
